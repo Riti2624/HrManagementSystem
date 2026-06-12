@@ -246,7 +246,6 @@ npm run dev
 ### Start Backend
 
 ```bash
-cd backend
 npm start
 ```
 
