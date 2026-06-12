@@ -233,13 +233,21 @@ Seed Database:
 ```bash
 npm run seed
 ```
+---
+
+### Start Backend and frontend
+
+```bash
+npm run dev
+```
 
 ---
 
 ### Start Backend
 
 ```bash
-npm run dev
+cd backend
+npm start
 ```
 
 Backend:
