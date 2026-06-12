@@ -233,15 +233,6 @@ Seed Database:
 ```bash
 npm run seed
 ```
----
-
-### Start Backend and frontend
-
-```bash
-npm run dev
-```
-
----
 
 ### Start Backend
 
@@ -283,6 +274,15 @@ Frontend:
 
 ```bash
 http://localhost:5173
+```
+
+---
+---
+
+### Start Backend and frontend
+
+```bash
+npm run dev
 ```
 
 ---
