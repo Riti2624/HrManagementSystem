@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("Employee")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Employee {
+  id               String         @id @default(uuid())
+  employeeCode     String         @unique
+  name             String
+  role             String         @default("")
+  department       String         @default("")
+  email            String
+  phone            String         @default("")
+  location         String         @default("")
+  status           String         @default("Active")
+  salary           Float          @default(0)
+  performanceScore Float          @default(0)
+  attendanceRate   Float          @default(0)
+  sentimentScore   Float          @default(0)
+  skills           String[]       @default([])
+  workload         Float          @default(0)
+  attritionRisk    String         @default("Low")
+  attendance       Attendance[]
+  leaves           Leave[]
+  payrolls         Payroll[]
+  notifications    Notification[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("employees")
+}
+
+model Attendance {
+  id             String   @id @default(uuid())
+  attendanceCode String   @unique
+  employeeCode   String
+  employee       Employee @relation(fields: [employeeCode], references: [employeeCode], onDelete: Cascade, onUpdate: Cascade)
+  date           String
+  checkIn        String?
+  checkOut       String?
+  status         String   @default("Present")
+  geo            String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeCode])
+  @@map("attendance")
+}
+
+model Leave {
+  id           String   @id @default(uuid())
+  leaveCode    String   @unique
+  employeeCode String
+  employee     Employee @relation(fields: [employeeCode], references: [employeeCode], onDelete: Cascade, onUpdate: Cascade)
+  type         String   @default("Casual")
+  from         String
+  to           String
+  reason       String   @default("")
+  status       String   @default("Pending")
+  balanceAfter Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([employeeCode])
+  @@map("leaves")
+}
+
+model Payroll {
+  id           String   @id @default(uuid())
+  payrollCode  String   @unique
+  employeeCode String
+  employee     Employee @relation(fields: [employeeCode], references: [employeeCode], onDelete: Cascade, onUpdate: Cascade)
+  month        String
+  base         Float    @default(0)
+  bonus        Float    @default(0)
+  deductions   Float    @default(0)
+  net          Float    @default(0)
+  benchmark    Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([employeeCode])
+  @@map("payrolls")
+}
+
+model Recruitment {
+  id           String        @id @default(uuid())
+  jobCode      String        @unique
+  title        String
+  department   String        @default("")
+  status       String        @default("Open")
+  applicants   Int           @default(0)
+  priority     String        @default("Medium")
+  applications Application[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("recruitment")
+}
+
+model Application {
+  id              String      @id @default(uuid())
+  applicationCode String      @unique
+  jobCode         String
+  job             Recruitment @relation(fields: [jobCode], references: [jobCode], onDelete: Cascade, onUpdate: Cascade)
+  name            String
+  score           Float       @default(0)
+  stage           String      @default("New")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([jobCode])
+  @@map("applications")
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  type       String    @default("info")
+  severity   String    @default("low")
+  title      String
+  detail     String    @default("")
+  message    String    @default("")
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [employeeCode], onDelete: SetNull, onUpdate: Cascade)
+  read       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([employeeId])
+  @@map("notifications")
+}
