@@ -282,6 +282,7 @@ http://localhost:5173
 ### Start Backend and frontend
 
 ```bash
+cd hrms_management
 npm run dev
 ```
 
