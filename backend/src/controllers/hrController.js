@@ -22,7 +22,9 @@ const {
   createApplication,
   updateApplication,
   deleteApplication,
-  listRecruitmentBundle
+  listRecruitmentBundle,
+  updateAttendance,
+  deleteAttendance
 } = require('../services/hrStore');
 const { generateCopilotResponse, generateDailySummary } = require('../services/aiService');
 const {
@@ -135,6 +137,45 @@ async function attendanceController(_req, res, next) {
     res.json(payload);
   } catch (error) {
     next(error);
+  }
+}
+
+async function updateAttendanceController(req, res, next) {
+  try {
+    const attendance = await updateAttendance(req.params.id, req.body || {});
+
+    if (!attendance) {
+      return res.status(404).json({ message: 'Attendance record not found' });
+    }
+
+    await createNotification({
+      type: 'attendance:updated',
+      severity: attendance.status === 'Absent' ? 'medium' : 'low',
+      title: 'Attendance updated',
+      detail: `${attendance.employeeId} attendance was updated for ${attendance.date}.`,
+      employeeId: attendance.employeeId
+    });
+    await evaluateAttendanceAlerts();
+    notifyChange('attendance:updated', attendance);
+    return res.json(attendance);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteAttendanceController(req, res, next) {
+  try {
+    const deleted = await deleteAttendance(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Attendance record not found' });
+    }
+
+    await evaluateAttendanceAlerts();
+    notifyChange('attendance:updated', { id: req.params.id, deleted: true });
+    return res.status(204).send();
+  } catch (error) {
+    return next(error);
   }
 }
 
@@ -368,6 +409,8 @@ module.exports = {
   updateEmployeeController,
   deleteEmployeeController,
   attendanceController,
+  updateAttendanceController,
+  deleteAttendanceController,
   leaveController,
   createLeaveController,
   updateLeaveController,

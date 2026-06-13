@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Card, CardDescription, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Drawer } from '../components/ui/Drawer';
 import { api } from '../lib/api';
 import { mockRecruitment } from '../data/mock';
 
@@ -48,6 +49,8 @@ export function RecruitmentPage() {
   const [applicationForm, setApplicationForm] = useState<ApplicationFormState>(emptyApplicationForm);
   const [jobError, setJobError] = useState('');
   const [applicationError, setApplicationError] = useState('');
+  const [jobDrawerOpen, setJobDrawerOpen] = useState(false);
+  const [candidateDrawerOpen, setCandidateDrawerOpen] = useState(false);
 
   const jobMutation = useMutation({
     mutationFn: async (payload: JobFormState) => {
@@ -69,6 +72,7 @@ export function RecruitmentPage() {
       setJobError('');
       await queryClient.invalidateQueries({ queryKey: ['recruitment'] });
       setJobForm(emptyJobForm);
+      setJobDrawerOpen(false);
     },
     onError: (error) => {
       setJobError(error instanceof Error ? error.message : 'Unable to save job');
@@ -95,6 +99,7 @@ export function RecruitmentPage() {
       setApplicationError('');
       await queryClient.invalidateQueries({ queryKey: ['recruitment'] });
       setApplicationForm(emptyApplicationForm);
+      setCandidateDrawerOpen(false);
     },
     onError: (error) => {
       setApplicationError(error instanceof Error ? error.message : 'Unable to save candidate');
@@ -111,6 +116,18 @@ export function RecruitmentPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recruitment'] })
   });
 
+  function openJobDrawer() {
+    setJobForm(emptyJobForm);
+    setJobError('');
+    setJobDrawerOpen(true);
+  }
+
+  function openCandidateDrawer() {
+    setApplicationForm(emptyApplicationForm);
+    setApplicationError('');
+    setCandidateDrawerOpen(true);
+  }
+
   function handleEditJob(job: any) {
     setJobForm({
       id: job.id,
@@ -120,6 +137,8 @@ export function RecruitmentPage() {
       applicants: String(job.applicants ?? 0),
       priority: job.priority
     });
+    setJobError('');
+    setJobDrawerOpen(true);
   }
 
   function handleEditApplication(candidate: any) {
@@ -130,77 +149,33 @@ export function RecruitmentPage() {
       score: String(candidate.score ?? 0),
       stage: candidate.stage
     });
+    setApplicationError('');
+    setCandidateDrawerOpen(true);
   }
+
+  const jobField = (key: keyof JobFormState, placeholder: string, type = 'text') => (
+    <Input type={type} value={jobForm[key] || ''} onChange={(event) => setJobForm((current) => ({ ...current, [key]: event.target.value }))} placeholder={placeholder} />
+  );
+
+  const candidateField = (key: keyof ApplicationFormState, placeholder: string, type = 'text') => (
+    <Input type={type} value={applicationForm[key] || ''} onChange={(event) => setApplicationForm((current) => ({ ...current, [key]: event.target.value }))} placeholder={placeholder} />
+  );
 
   return (
     <AppShell title="Recruitment Hub">
       <div className="space-y-6">
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardTitle>{jobForm.id ? 'Edit Job Posting' : 'Open New Role'}</CardTitle>
-            <CardDescription>Create or update job postings with Mongo persistence.</CardDescription>
-            <form
-              className="mt-4 grid gap-3 md:grid-cols-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setJobError('');
-              jobMutation.mutate(jobForm);
-            }}
-          >
-              {jobError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 md:col-span-2">{jobError}</div> : null}
-              {[
-                ['title', 'Title'],
-                ['department', 'Department'],
-                ['status', 'Status'],
-                ['applicants', 'Applicants'],
-                ['priority', 'Priority']
-              ].map(([key, label]) => (
-                <Input
-                  key={key}
-                  value={jobForm[key as keyof JobFormState]}
-                  onChange={(event) => setJobForm((current) => ({ ...current, [key]: event.target.value }))}
-                  placeholder={label}
-                />
-              ))}
-              <div className="flex gap-3 md:col-span-2">
-                <Button type="submit" disabled={jobMutation.isPending}>{jobForm.id ? 'Update Job' : 'Create Job'}</Button>
-                <Button type="button" variant="secondary" onClick={() => setJobForm(emptyJobForm)}>Reset</Button>
-              </div>
-            </form>
-          </Card>
-
-          <Card>
-            <CardTitle>{applicationForm.id ? 'Edit Candidate' : 'Add Candidate'}</CardTitle>
-            <CardDescription>Create or update candidates and resume scores.</CardDescription>
-            <form
-              className="mt-4 grid gap-3 md:grid-cols-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setApplicationError('');
-              applicationMutation.mutate(applicationForm);
-            }}
-          >
-              {applicationError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 md:col-span-2">{applicationError}</div> : null}
-              {[
-                ['jobId', 'Job ID'],
-                ['name', 'Candidate Name'],
-                ['score', 'Resume Score'],
-                ['stage', 'Stage']
-              ].map(([key, label]) => (
-                <Input
-                  key={key}
-                  value={applicationForm[key as keyof ApplicationFormState]}
-                  onChange={(event) => setApplicationForm((current) => ({ ...current, [key]: event.target.value }))}
-                  placeholder={label}
-                />
-              ))}
-              <div className="flex gap-3 md:col-span-2">
-                <Button type="submit" disabled={applicationMutation.isPending}>{applicationForm.id ? 'Update Candidate' : 'Create Candidate'}</Button>
-                <Button type="button" variant="secondary" onClick={() => setApplicationForm(emptyApplicationForm)}>Reset</Button>
-              </div>
-            </form>
-          </Card>
-        </div>
+        <Card>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Recruitment Workspace</CardTitle>
+              <CardDescription>Manage open roles and candidate movement from focused drawers.</CardDescription>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button type="button" onClick={openJobDrawer}><Plus size={16} className="mr-2" /> Open Role</Button>
+              <Button type="button" variant="secondary" onClick={openCandidateDrawer}><Plus size={16} className="mr-2" /> Add Candidate</Button>
+            </div>
+          </div>
+        </Card>
 
         <div className="grid gap-4 xl:grid-cols-2">
           <Card>
@@ -216,7 +191,7 @@ export function RecruitmentPage() {
                     </div>
                     <Badge tone={job.priority === 'High' ? 'danger' : job.priority === 'Medium' ? 'warning' : 'neutral'}>{job.priority}</Badge>
                   </div>
-                  <div className="mt-3 text-sm text-slate-300">{job.applicants} applicants · {job.status}</div>
+                  <div className="mt-3 text-sm text-slate-500">{job.applicants} applicants - {job.status}</div>
                   <div className="mt-4 flex gap-3">
                     <Button size="sm" onClick={() => handleEditJob(job)}><Pencil size={14} className="mr-2" /> Edit</Button>
                     <Button size="sm" variant="secondary" onClick={() => deleteJobMutation.mutate(job.id)} disabled={deleteJobMutation.isPending}><Trash2 size={14} className="mr-2" /> Delete</Button>
@@ -251,6 +226,49 @@ export function RecruitmentPage() {
           </Card>
         </div>
       </div>
+
+      <Drawer
+        open={jobDrawerOpen}
+        title={jobForm.id ? 'Edit Job Posting' : 'Open New Role'}
+        description="Create or update job postings with Mongo persistence."
+        onClose={() => setJobDrawerOpen(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setJobDrawerOpen(false)} disabled={jobMutation.isPending}>Cancel</Button>
+            <Button type="button" onClick={() => jobMutation.mutate(jobForm)} disabled={jobMutation.isPending}>{jobMutation.isPending ? 'Saving...' : jobForm.id ? 'Update Job' : 'Create Job'}</Button>
+          </div>
+        }
+      >
+        <div className="grid gap-3">
+          {jobError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{jobError}</div> : null}
+          {jobField('title', 'Title')}
+          {jobField('department', 'Department')}
+          {jobField('status', 'Status')}
+          {jobField('applicants', 'Applicants', 'number')}
+          {jobField('priority', 'Priority')}
+        </div>
+      </Drawer>
+
+      <Drawer
+        open={candidateDrawerOpen}
+        title={applicationForm.id ? 'Edit Candidate' : 'Add Candidate'}
+        description="Create or update candidates and resume scores."
+        onClose={() => setCandidateDrawerOpen(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setCandidateDrawerOpen(false)} disabled={applicationMutation.isPending}>Cancel</Button>
+            <Button type="button" onClick={() => applicationMutation.mutate(applicationForm)} disabled={applicationMutation.isPending}>{applicationMutation.isPending ? 'Saving...' : applicationForm.id ? 'Update Candidate' : 'Create Candidate'}</Button>
+          </div>
+        }
+      >
+        <div className="grid gap-3">
+          {applicationError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{applicationError}</div> : null}
+          {candidateField('jobId', 'Job ID')}
+          {candidateField('name', 'Candidate Name')}
+          {candidateField('score', 'Resume Score', 'number')}
+          {candidateField('stage', 'Stage')}
+        </div>
+      </Drawer>
     </AppShell>
   );
 }

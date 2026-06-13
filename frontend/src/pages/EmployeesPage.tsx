@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Search, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Search, Trash2 } from 'lucide-react';
 import { AppShell } from '../components/layout/AppShell';
 import { Button } from '../components/ui/Button';
 import { Card, CardDescription, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Wizard } from '../components/ui/Wizard';
 import { api } from '../lib/api';
 import { mockEmployees } from '../data/mock';
 
@@ -45,6 +46,12 @@ const emptyForm: EmployeeFormState = {
   skillsText: ''
 };
 
+const wizardSteps = [
+  { title: 'Profile', description: 'Identity and contact' },
+  { title: 'Role', description: 'Team and employment' },
+  { title: 'Metrics', description: 'Risk and performance' }
+];
+
 export function EmployeesPage() {
   const queryClient = useQueryClient();
   const { data = mockEmployees } = useQuery({ queryKey: ['employees'], queryFn: () => api.getEmployees() });
@@ -52,6 +59,8 @@ export function EmployeesPage() {
   const [department, setDepartment] = useState('All');
   const [form, setForm] = useState<EmployeeFormState>(emptyForm);
   const [formError, setFormError] = useState('');
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [step, setStep] = useState(0);
 
   const departments = ['All', ...Array.from(new Set(data.map((employee) => employee.department)))];
   const filtered = useMemo(() => data.filter((employee) => {
@@ -85,6 +94,8 @@ export function EmployeesPage() {
       setFormError('');
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
       setForm(emptyForm);
+      setIsWizardOpen(false);
+      setStep(0);
     },
     onError: (error) => {
       setFormError(error instanceof Error ? error.message : 'Unable to save employee');
@@ -95,6 +106,13 @@ export function EmployeesPage() {
     mutationFn: (id: string) => api.deleteEmployee(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] })
   });
+
+  function openCreateWizard() {
+    setForm(emptyForm);
+    setFormError('');
+    setStep(0);
+    setIsWizardOpen(true);
+  }
 
   function handleEdit(employee: any) {
     setForm({
@@ -114,7 +132,14 @@ export function EmployeesPage() {
       attritionRisk: employee.attritionRisk || 'Low',
       skillsText: Array.isArray(employee.skills) ? employee.skills.join(', ') : ''
     });
+    setFormError('');
+    setStep(0);
+    setIsWizardOpen(true);
   }
+
+  const field = (key: keyof EmployeeFormState, placeholder: string, type = 'text') => (
+    <Input type={type} value={form[key] || ''} onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))} placeholder={placeholder} />
+  );
 
   return (
     <AppShell title="Employee Management">
@@ -125,58 +150,17 @@ export function EmployeesPage() {
               <CardTitle>Employee Directory</CardTitle>
               <CardDescription>Search, filter, and keep employee records persisted in MongoDB.</CardDescription>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <div className="relative min-w-[240px] flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search employees" className="pl-10" />
               </div>
-              <select value={department} onChange={(event) => setDepartment(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+              <select value={department} onChange={(event) => setDepartment(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900">
                 {departments.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
+              <Button type="button" onClick={openCreateWizard}><Plus size={16} className="mr-2" /> Add Employee</Button>
             </div>
           </div>
-        </Card>
-
-        <Card>
-          <CardTitle>{form.id ? 'Edit Employee' : 'Add Employee'}</CardTitle>
-          <CardDescription>Create or update records without leaving the page.</CardDescription>
-          <form
-            className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setFormError('');
-              saveMutation.mutate(form);
-            }}
-          >
-            {formError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 md:col-span-2 xl:col-span-3">{formError}</div> : null}
-            {[
-              ['name', 'Name'],
-              ['role', 'Role'],
-              ['department', 'Department'],
-              ['email', 'Email'],
-              ['phone', 'Phone'],
-              ['location', 'Location'],
-              ['status', 'Status'],
-              ['salary', 'Salary'],
-              ['performanceScore', 'Performance Score'],
-              ['attendanceRate', 'Attendance Rate'],
-              ['sentimentScore', 'Sentiment Score'],
-              ['workload', 'Workload'],
-              ['attritionRisk', 'Attrition Risk'],
-              ['skillsText', 'Skills']
-            ].map(([key, label]) => (
-              <Input
-                key={key}
-                value={form[key as keyof EmployeeFormState]}
-                onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
-                placeholder={label}
-              />
-            ))}
-            <div className="flex gap-3 md:col-span-2 xl:col-span-3">
-              <Button type="submit" disabled={saveMutation.isPending}>{form.id ? 'Update Employee' : 'Create Employee'}</Button>
-              <Button type="button" variant="secondary" onClick={() => setForm(emptyForm)}>Reset</Button>
-            </div>
-          </form>
         </Card>
 
         {filtered.length === 0 ? (
@@ -212,6 +196,56 @@ export function EmployeesPage() {
           </div>
         )}
       </div>
+
+      <Wizard
+        open={isWizardOpen}
+        title={form.id ? 'Edit Employee' : 'Add Employee'}
+        description="Complete the employee profile in focused steps."
+        steps={wizardSteps}
+        currentStep={step}
+        onClose={() => setIsWizardOpen(false)}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+            <Button type="button" variant="secondary" onClick={() => setStep((current) => Math.max(0, current - 1))} disabled={step === 0 || saveMutation.isPending}>Back</Button>
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" onClick={() => setIsWizardOpen(false)} disabled={saveMutation.isPending}>Cancel</Button>
+              {step < wizardSteps.length - 1 ? (
+                <Button type="button" onClick={() => setStep((current) => current + 1)}>Next</Button>
+              ) : (
+                <Button type="button" onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : form.id ? 'Update Employee' : 'Create Employee'}</Button>
+              )}
+            </div>
+          </div>
+        }
+      >
+        {formError ? <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{formError}</div> : null}
+        {step === 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {field('name', 'Name')}
+            {field('email', 'Email')}
+            {field('phone', 'Phone')}
+            {field('location', 'Location')}
+          </div>
+        ) : null}
+        {step === 1 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {field('role', 'Role')}
+            {field('department', 'Department')}
+            {field('status', 'Status')}
+            {field('skillsText', 'Skills')}
+          </div>
+        ) : null}
+        {step === 2 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {field('salary', 'Salary', 'number')}
+            {field('performanceScore', 'Performance Score', 'number')}
+            {field('attendanceRate', 'Attendance Rate', 'number')}
+            {field('sentimentScore', 'Sentiment Score', 'number')}
+            {field('workload', 'Workload', 'number')}
+            {field('attritionRisk', 'Attrition Risk')}
+          </div>
+        ) : null}
+      </Wizard>
     </AppShell>
   );
 }

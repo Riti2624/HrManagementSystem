@@ -48,7 +48,7 @@ function businessCode(prefix, suppliedCode) {
 
 function serializeAttendance(record) {
   return {
-    id: String(record._id ?? record.id),
+    id: String(record._id ?? record.id ?? record.attendanceCode),
     attendanceCode: record.attendanceCode,
     employeeCode: record.employeeCode,
     employeeId: record.employeeCode,
@@ -177,6 +177,18 @@ function serializeLeavePayload(payload) {
     reason: payload.reason,
     status: payload.status || 'Pending',
     balanceAfter: Number(payload.balanceAfter ?? 0)
+  };
+}
+
+function serializeAttendancePayload(payload) {
+  return {
+    attendanceCode: payload.attendanceCode,
+    employeeCode: payload.employeeCode || payload.employeeId,
+    date: payload.date,
+    checkIn: payload.checkIn || null,
+    checkOut: payload.checkOut || null,
+    status: payload.status || 'Present',
+    geo: payload.geo || ''
   };
 }
 
@@ -573,10 +585,56 @@ async function listAttendance() {
   }
 
   if (useFallbackStore()) {
-    return clone(memoryStore.attendance);
+    return memoryStore.attendance.map(serializeAttendance);
   }
 
   requireStorageMode();
+}
+
+async function updateAttendance(id, payload) {
+  if (isDatabaseReady()) {
+    const updatePayload = sanitizeUpdatePayload(serializeAttendancePayload({ ...payload, id }));
+    delete updatePayload._id;
+    delete updatePayload.attendanceCode;
+    const existing = await prisma.attendance.findFirst({ where: identifierFilter(id, 'attendanceCode') });
+    const record = existing ? await prisma.attendance.update({ where: { id: existing.id }, data: updatePayload }) : null;
+    return record ? serializeAttendance(record) : null;
+  }
+
+  if (!useFallbackStore()) {
+    requireStorageMode();
+  }
+
+  const index = memoryStore.attendance.findIndex((item) => item.id === id || item.attendanceCode === id);
+  if (index === -1) {
+    return null;
+  }
+
+  memoryStore.attendance[index] = { ...memoryStore.attendance[index], ...serializeAttendancePayload(payload) };
+  return serializeAttendance(memoryStore.attendance[index]);
+}
+
+async function deleteAttendance(id) {
+  if (isDatabaseReady()) {
+    const existing = await prisma.attendance.findFirst({ where: identifierFilter(id, 'attendanceCode') });
+    if (!existing) {
+      return false;
+    }
+    await prisma.attendance.delete({ where: { id: existing.id } });
+    return true;
+  }
+
+  if (!useFallbackStore()) {
+    requireStorageMode();
+  }
+
+  const index = memoryStore.attendance.findIndex((item) => item.id === id || item.attendanceCode === id);
+  if (index === -1) {
+    return false;
+  }
+
+  memoryStore.attendance.splice(index, 1);
+  return true;
 }
 
 async function listPayrolls() {
@@ -613,5 +671,7 @@ module.exports = {
   deleteApplication,
   listRecruitmentBundle,
   listAttendance,
+  updateAttendance,
+  deleteAttendance,
   listPayrolls
 };

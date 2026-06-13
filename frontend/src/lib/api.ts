@@ -134,6 +134,12 @@ export const api = {
   async getAttendance() {
     return request('/attendance', {}, mockAttendance);
   },
+  async updateAttendance(id: string, payload: Record<string, unknown>) {
+    return request(`/attendance/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  async deleteAttendance(id: string) {
+    return request(`/attendance/${id}`, { method: 'DELETE' });
+  },
   async getLeaves() {
     return request('/leave', {}, mockLeaves);
   },
