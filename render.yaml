@@ -1,3 +1,9 @@
+databases:
+  - name: hrms-db
+    databaseName: hrms
+    user: hrms_user
+    plan: free
+
 services:
   # Backend Web Service
   - type: web
@@ -11,7 +17,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false # You will need to provide this in the Render dashboard
+        fromDatabase:
+          name: hrms-db
+          property: connectionString
         
   # Frontend Static Site
   - type: web
