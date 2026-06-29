@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
@@ -13,8 +14,9 @@ const recruitmentRoutes = require('./routes/recruitmentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const candidateRoutes = require('./routes/candidateRoutes');
 const { errorHandler } = require('./middleware/errorMiddleware');
-const { requireAuth } = require('./middleware/authMiddleware');
+const { requireAuth, requireRole } = require('./middleware/authMiddleware');
 const { dashboardController } = require('./controllers/hrController');
 const { getDatabaseHealth } = require('./config/db');
 
@@ -25,6 +27,7 @@ function createApp() {
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
   app.use(morgan('dev'));
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'hrms-backend' });
@@ -46,6 +49,7 @@ function createApp() {
   app.use('/notifications', notificationRoutes);
   app.use('/search', searchRoutes);
   app.use('/reports', reportRoutes);
+  app.use('/candidate', requireAuth, requireRole('Candidate'), candidateRoutes);
 
   app.use(errorHandler);
 

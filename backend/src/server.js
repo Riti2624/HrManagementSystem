@@ -36,9 +36,7 @@ async function bootstrap() {
 
   setSocketServer(io);
 
-  io.on('connection', (socket) => {
-    socket.emit('dashboard:refresh', { reason: 'connected', updatedAt: new Date().toISOString() });
-  });
+  io.on('connection', () => {});
 
   httpServer.listen(port, () => {
     console.log(`HRMS backend listening on port ${port}`);

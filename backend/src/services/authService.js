@@ -63,7 +63,7 @@ async function signup({ name, email, password, role }) {
       name: String(name).trim(),
       email: normalizedEmail,
       password: await bcrypt.hash(password, 10),
-      role: ['Admin', 'HR', 'Employee', 'Contractor'].includes(role) ? role : 'Employee'
+      role: ['Admin', 'HR', 'Employee', 'Candidate'].includes(role) ? role : 'Employee'
     } });
 
     return {

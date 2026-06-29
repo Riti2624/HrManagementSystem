@@ -17,7 +17,9 @@ const memoryStore = {
   leaves: seedLeaves.map((item) => ({ ...item })),
   payrolls: seedPayrolls.map((item) => ({ ...item })),
   jobs: seedJobs.map((item) => ({ ...item })),
-  applications: seedApplications.map((item) => ({ ...item }))
+  applications: seedApplications.map((item) => ({ ...item })),
+  interviews: [],
+  feedbacks: []
 };
 
 function isDatabaseReady() {
@@ -128,6 +130,11 @@ function serializeJob(record) {
     status: record.status,
     applicants: record.applicants,
     priority: record.priority,
+    description: record.description || '',
+    requirements: record.requirements || '',
+    location: record.location || '',
+    salary: record.salary || '',
+    closingDate: record.closingDate || null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt
   };
@@ -142,6 +149,47 @@ function serializeApplication(record) {
     name: record.name,
     score: record.score,
     stage: record.stage,
+    candidateId: record.candidateId || null,
+    resumeUrl: record.resumeUrl || '',
+    coverLetter: record.coverLetter || '',
+    aiScore: record.aiScore || 0,
+    aiSummary: record.aiSummary || '',
+    recruiterNotes: record.recruiterNotes || '',
+    skills: record.candidate?.skills || record.skills || [],
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
+  };
+}
+
+function serializeInterview(record) {
+  return {
+    id: String(record._id ?? record.id),
+    interviewCode: record.interviewCode,
+    applicationId: record.applicationId,
+    roundType: record.roundType || 'HR',
+    scheduledAt: record.scheduledAt,
+    interviewers: record.interviewers || [],
+    location: record.location || '',
+    status: record.status || 'Scheduled',
+    notes: record.notes || '',
+    feedbacks: record.feedbacks || [],
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
+  };
+}
+
+function serializeFeedback(record) {
+  return {
+    id: String(record._id ?? record.id),
+    interviewId: record.interviewId,
+    reviewerName: record.reviewerName || '',
+    communication: Number(record.communication || 0),
+    technical: Number(record.technical || 0),
+    cultureFit: Number(record.cultureFit || 0),
+    leadership: Number(record.leadership || 0),
+    overallScore: Number(record.overallScore || 0),
+    recommendation: record.recommendation || 'Hold',
+    comments: record.comments || '',
     createdAt: record.createdAt,
     updatedAt: record.updatedAt
   };
@@ -199,7 +247,12 @@ function serializeJobPayload(payload) {
     department: payload.department,
     status: payload.status || 'Open',
     applicants: Number(payload.applicants || 0),
-    priority: payload.priority || 'Medium'
+    priority: payload.priority || 'Medium',
+    description: payload.description || '',
+    requirements: payload.requirements || '',
+    location: payload.location || '',
+    salary: payload.salary || '',
+    closingDate: payload.closingDate || null
   };
 }
 
@@ -209,7 +262,42 @@ function serializeApplicationPayload(payload) {
     jobCode: payload.jobCode || payload.jobId,
     name: payload.name,
     score: Number(payload.score || 0),
-    stage: payload.stage || 'New'
+    stage: payload.stage || 'New',
+    candidateId: payload.candidateId || null,
+    resumeUrl: payload.resumeUrl || '',
+    coverLetter: payload.coverLetter || '',
+    aiScore: Number(payload.aiScore || 0),
+    aiSummary: payload.aiSummary || '',
+    recruiterNotes: payload.recruiterNotes || ''
+  };
+}
+
+function serializeInterviewPayload(payload) {
+  return {
+    interviewCode: payload.interviewCode,
+    applicationId: payload.applicationId,
+    roundType: payload.roundType || 'HR',
+    scheduledAt: payload.scheduledAt,
+    interviewers: Array.isArray(payload.interviewers)
+      ? payload.interviewers
+      : String(payload.interviewers || '').split(',').map((s) => s.trim()).filter(Boolean),
+    location: payload.location || '',
+    status: payload.status || 'Scheduled',
+    notes: payload.notes || ''
+  };
+}
+
+function serializeFeedbackPayload(payload) {
+  return {
+    interviewId: payload.interviewId,
+    reviewerName: payload.reviewerName || '',
+    communication: Number(payload.communication || 0),
+    technical: Number(payload.technical || 0),
+    cultureFit: Number(payload.cultureFit || 0),
+    leadership: Number(payload.leadership || 0),
+    overallScore: Number(payload.overallScore || 0),
+    recommendation: payload.recommendation || 'Hold',
+    comments: payload.comments || ''
   };
 }
 
@@ -435,16 +523,45 @@ async function listJobs() {
 }
 
 async function createJob(payload) {
+  let nextJobCode = payload.jobCode;
+
   if (isDatabaseReady()) {
+    if (!nextJobCode) {
+      const allJobs = await prisma.recruitment.findMany({ select: { jobCode: true } });
+      let maxNum = 0;
+      for (const j of allJobs) {
+        if (j.jobCode && j.jobCode.startsWith('job-')) {
+          const num = parseInt(j.jobCode.replace('job-', ''), 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+      nextJobCode = `job-${String(maxNum + 1).padStart(3, '0')}`;
+    }
+
     const record = await prisma.recruitment.create({ data: {
       ...serializeJobPayload(payload),
-      jobCode: businessCode('job', payload.jobCode)
+      jobCode: nextJobCode
     } });
     return serializeJob(record);
   }
 
   if (useFallbackStore()) {
-    const item = { ...payload, id: payload.id || uuidv4() };
+    if (!nextJobCode) {
+      let maxNum = 0;
+      for (const j of memoryStore.jobs) {
+        if (j.jobCode && j.jobCode.startsWith('job-')) {
+          const num = parseInt(j.jobCode.replace('job-', ''), 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+      nextJobCode = `job-${String(maxNum + 1).padStart(3, '0')}`;
+    }
+
+    const item = { ...payload, jobCode: nextJobCode, id: payload.id || uuidv4() };
     memoryStore.jobs.unshift(item);
     return clone(item);
   }
@@ -499,12 +616,19 @@ async function deleteJob(id) {
 
 async function listApplications() {
   if (isDatabaseReady()) {
-    const records = await prisma.application.findMany({ orderBy: { createdAt: 'desc' } });
+    const records = await prisma.application.findMany({ 
+      orderBy: { createdAt: 'desc' },
+      include: { candidate: { select: { skills: true } } }
+    });
     return records.map(serializeApplication);
   }
 
   if (useFallbackStore()) {
-    return clone(memoryStore.applications);
+    const { users } = require('../data/seedData');
+    return memoryStore.applications.map((app) => {
+      const candidate = users.find((u) => String(u.id) === String(app.candidateId));
+      return serializeApplication({ ...app, candidate: { skills: candidate?.skills || [] } });
+    });
   }
 
   requireStorageMode();
@@ -530,11 +654,18 @@ async function createApplication(payload) {
 
 async function updateApplication(id, payload) {
   if (isDatabaseReady()) {
-    const updatePayload = sanitizeUpdatePayload(serializeApplicationPayload({ ...payload, id }));
-    delete updatePayload._id;
     const existing = await prisma.application.findFirst({ where: identifierFilter(id, 'applicationCode') });
-    const record = existing ? await prisma.application.update({ where: { id: existing.id }, data: updatePayload }) : null;
-    return record ? serializeApplication(record) : null;
+    if (!existing) return null;
+
+    const mergedPayload = { ...existing, ...payload };
+    const updatePayload = sanitizeUpdatePayload(serializeApplicationPayload(mergedPayload));
+    
+    // Remove fields that should not be updated directly or do not exist in the Prisma schema
+    delete updatePayload._id;
+    delete updatePayload.candidateId;
+
+    const record = await prisma.application.update({ where: { id: existing.id }, data: updatePayload });
+    return serializeApplication(record);
   }
 
   if (!useFallbackStore()) {
@@ -574,8 +705,194 @@ async function deleteApplication(id) {
 }
 
 async function listRecruitmentBundle() {
-  const [jobs, applications] = await Promise.all([listJobs(), listApplications()]);
-  return { jobs, applications };
+  const [jobs, applications, interviews] = await Promise.all([listJobs(), listApplications(), listInterviews()]);
+  return { jobs, applications, interviews };
+}
+
+// ── Interviews ────────────────────────────────────────────────────────────────
+
+async function listInterviews() {
+  if (isDatabaseReady()) {
+    const records = await prisma.interview.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { feedbacks: true }
+    });
+    return records.map((r) => serializeInterview({ ...r, feedbacks: r.feedbacks.map(serializeFeedback) }));
+  }
+  if (useFallbackStore()) {
+    return clone(memoryStore.interviews);
+  }
+  requireStorageMode();
+}
+
+async function createInterview(payload) {
+  if (isDatabaseReady()) {
+    const record = await prisma.interview.create({
+      data: {
+        ...serializeInterviewPayload(payload),
+        interviewCode: businessCode('iv', payload.interviewCode)
+      },
+      include: { feedbacks: true }
+    });
+    return serializeInterview({ ...record, feedbacks: record.feedbacks.map(serializeFeedback) });
+  }
+  if (useFallbackStore()) {
+    const item = { ...serializeInterviewPayload(payload), id: uuidv4(), interviewCode: businessCode('iv', payload.interviewCode), feedbacks: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    memoryStore.interviews.unshift(item);
+    return clone(item);
+  }
+  requireStorageMode();
+}
+
+async function updateInterview(id, payload) {
+  if (isDatabaseReady()) {
+    const updatePayload = sanitizeUpdatePayload(serializeInterviewPayload({ ...payload, id }));
+    delete updatePayload._id;
+    delete updatePayload.interviewCode;
+    const existing = await prisma.interview.findFirst({ where: identifierFilter(id, 'interviewCode') });
+    const record = existing
+      ? await prisma.interview.update({ where: { id: existing.id }, data: updatePayload, include: { feedbacks: true } })
+      : null;
+    return record ? serializeInterview({ ...record, feedbacks: record.feedbacks.map(serializeFeedback) }) : null;
+  }
+  if (!useFallbackStore()) requireStorageMode();
+  const index = memoryStore.interviews.findIndex((item) => item.id === id || item.interviewCode === id);
+  if (index === -1) return null;
+  memoryStore.interviews[index] = { ...memoryStore.interviews[index], ...serializeInterviewPayload(payload), id };
+  return clone(memoryStore.interviews[index]);
+}
+
+async function deleteInterview(id) {
+  if (isDatabaseReady()) {
+    const existing = await prisma.interview.findFirst({ where: identifierFilter(id, 'interviewCode') });
+    if (!existing) return false;
+    await prisma.interview.delete({ where: { id: existing.id } });
+    return true;
+  }
+  if (!useFallbackStore()) requireStorageMode();
+  const index = memoryStore.interviews.findIndex((item) => item.id === id || item.interviewCode === id);
+  if (index === -1) return false;
+  memoryStore.interviews.splice(index, 1);
+  return true;
+}
+
+// ── Interview Feedback ────────────────────────────────────────────────────────
+
+async function listFeedbackForInterview(interviewId) {
+  if (isDatabaseReady()) {
+    const records = await prisma.interviewFeedback.findMany({ where: { interviewId }, orderBy: { createdAt: 'desc' } });
+    return records.map(serializeFeedback);
+  }
+  if (useFallbackStore()) {
+    return clone(memoryStore.feedbacks.filter((f) => f.interviewId === interviewId));
+  }
+  requireStorageMode();
+}
+
+async function createFeedback(payload) {
+  if (isDatabaseReady()) {
+    const record = await prisma.interviewFeedback.create({ data: serializeFeedbackPayload(payload) });
+    return serializeFeedback(record);
+  }
+  if (useFallbackStore()) {
+    const item = { ...serializeFeedbackPayload(payload), id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    memoryStore.feedbacks.unshift(item);
+    return clone(item);
+  }
+  requireStorageMode();
+}
+
+async function updateFeedback(id, payload) {
+  if (isDatabaseReady()) {
+    const existing = await prisma.interviewFeedback.findFirst({ where: { id } });
+    const record = existing
+      ? await prisma.interviewFeedback.update({ where: { id: existing.id }, data: sanitizeUpdatePayload(serializeFeedbackPayload(payload)) })
+      : null;
+    return record ? serializeFeedback(record) : null;
+  }
+  if (!useFallbackStore()) requireStorageMode();
+  const index = memoryStore.feedbacks.findIndex((f) => f.id === id);
+  if (index === -1) return null;
+  memoryStore.feedbacks[index] = { ...memoryStore.feedbacks[index], ...serializeFeedbackPayload(payload), id };
+  return clone(memoryStore.feedbacks[index]);
+}
+
+// ── Candidate-to-Employee Conversion ─────────────────────────────────────────
+
+async function convertCandidateToEmployee(applicationId, extraPayload = {}) {
+  // Fetch application
+  let application = null;
+  let candidate = null;
+
+  if (isDatabaseReady()) {
+    const appRecord = await prisma.application.findFirst({
+      where: identifierFilter(applicationId, 'applicationCode'),
+      include: { candidate: true, job: true }
+    });
+    if (!appRecord) throw new Error('Application not found');
+    application = serializeApplication(appRecord);
+    candidate = appRecord.candidate || null;
+
+    // Build employee data
+    const empCode = businessCode('emp', extraPayload.employeeCode);
+    const employeeData = {
+      employeeCode: empCode,
+      name: extraPayload.name || candidate?.name || application.name,
+      role: extraPayload.role || appRecord.job?.title || 'New Employee',
+      department: extraPayload.department || appRecord.job?.department || 'General',
+      email: extraPayload.email || candidate?.email || '',
+      phone: extraPayload.phone || candidate?.phone || '',
+      location: extraPayload.location || appRecord.job?.location || '',
+      status: 'Active',
+      salary: Number(extraPayload.salary || 0),
+      performanceScore: 0,
+      attendanceRate: 0,
+      sentimentScore: 0,
+      skills: extraPayload.skills || candidate?.skills || [],
+      workload: 0,
+      attritionRisk: 'Low'
+    };
+
+    const employee = await prisma.employee.create({ data: employeeData });
+    await prisma.application.update({
+      where: { id: appRecord.id },
+      data: { stage: 'Hired' }
+    });
+    return { employee: serializeEmployee(employee), application: { ...application, stage: 'Hired' } };
+  }
+
+  if (useFallbackStore()) {
+    const appRecord = memoryStore.applications.find((a) => a.id === applicationId || a.applicationCode === applicationId);
+    if (!appRecord) throw new Error('Application not found');
+    const job = memoryStore.jobs.find((j) => j.jobCode === appRecord.jobCode);
+    const empCode = businessCode('emp', extraPayload.employeeCode);
+    const newEmployee = {
+      id: uuidv4(),
+      employeeCode: empCode,
+      name: extraPayload.name || appRecord.name,
+      role: extraPayload.role || job?.title || 'New Employee',
+      department: extraPayload.department || job?.department || 'General',
+      email: extraPayload.email || '',
+      phone: extraPayload.phone || '',
+      location: extraPayload.location || '',
+      status: 'Active',
+      salary: Number(extraPayload.salary || 0),
+      performanceScore: 0,
+      attendanceRate: 0,
+      sentimentScore: 0,
+      skills: extraPayload.skills || [],
+      workload: 0,
+      attritionRisk: 'Low',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    memoryStore.employees.unshift(newEmployee);
+    const appIndex = memoryStore.applications.findIndex((a) => a.id === applicationId || a.applicationCode === applicationId);
+    if (appIndex !== -1) memoryStore.applications[appIndex].stage = 'Hired';
+    return { employee: clone(newEmployee), application: { ...appRecord, stage: 'Hired' } };
+  }
+
+  requireStorageMode();
 }
 
 async function listAttendance() {
@@ -673,5 +990,13 @@ module.exports = {
   listAttendance,
   updateAttendance,
   deleteAttendance,
-  listPayrolls
+  listPayrolls,
+  listInterviews,
+  createInterview,
+  updateInterview,
+  deleteInterview,
+  listFeedbackForInterview,
+  createFeedback,
+  updateFeedback,
+  convertCandidateToEmployee
 };

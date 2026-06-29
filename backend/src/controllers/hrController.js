@@ -1,4 +1,4 @@
-const {
+const {
   enrichEmployees,
   calculateDashboard,
   attendanceInsights,
@@ -24,7 +24,15 @@ const {
   deleteApplication,
   listRecruitmentBundle,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
+  listInterviews,
+  createInterview,
+  updateInterview,
+  deleteInterview,
+  listFeedbackForInterview,
+  createFeedback,
+  updateFeedback,
+  convertCandidateToEmployee
 } = require('../services/hrStore');
 const { generateCopilotResponse, generateDailySummary } = require('../services/aiService');
 const {
@@ -36,6 +44,7 @@ const {
 const { evaluateEmployeeAlerts, evaluateAttendanceAlerts } = require('../services/hrAlertEngine');
 const { emitSocketEvent, emitDashboardRefresh } = require('../services/socketService');
 const { searchEverything } = require('../services/searchService');
+const { screenApplication, rankApplications, computeFunnelAnalytics } = require('../services/atsService');
 
 function notifyChange(event, payload) {
   emitSocketEvent(event, payload);
@@ -182,7 +191,7 @@ async function deleteAttendanceController(req, res, next) {
 async function leaveController(_req, res, next) {
   try {
     const requests = await listLeaves();
-    res.json({ suggestions: leaveSuggestions(), requests });
+    res.json({ suggestions: await leaveSuggestions(), requests });
   } catch (error) {
     next(error);
   }
@@ -266,7 +275,7 @@ async function createJobController(req, res, next) {
   try {
     const job = await createJob(req.body || {});
     await createNotification({ type: 'recruitment:updated', severity: 'low', title: 'Job created', detail: `${job.title} was opened.` });
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', job);
     res.status(201).json(job);
   } catch (error) {
     next(error);
@@ -282,7 +291,7 @@ async function updateJobController(req, res, next) {
     }
 
     await createNotification({ type: 'recruitment:updated', severity: 'low', title: 'Job updated', detail: `${job.title} was updated.` });
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', job);
     return res.json(job);
   } catch (error) {
     return next(error);
@@ -297,7 +306,7 @@ async function deleteJobController(req, res, next) {
       return res.status(404).json({ message: 'Job not found' });
     }
 
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', { id: req.params.id, deleted: true, entity: 'job' });
     return res.status(204).send();
   } catch (error) {
     return next(error);
@@ -308,7 +317,7 @@ async function createApplicationController(req, res, next) {
   try {
     const application = await createApplication(req.body || {});
     await createNotification({ type: 'recruitment:updated', severity: 'low', title: 'Candidate added', detail: `${application.name} was added to the pipeline.` });
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', application);
     res.status(201).json(application);
   } catch (error) {
     next(error);
@@ -324,7 +333,7 @@ async function updateApplicationController(req, res, next) {
     }
 
     await createNotification({ type: 'recruitment:updated', severity: 'low', title: 'Candidate updated', detail: `${application.name} moved to ${application.stage}.` });
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', application);
     return res.json(application);
   } catch (error) {
     return next(error);
@@ -339,11 +348,158 @@ async function deleteApplicationController(req, res, next) {
       return res.status(404).json({ message: 'Application not found' });
     }
 
-    notifyChange('dashboard:refresh', { reason: 'recruitment:updated' });
+    notifyChange('recruitment:updated', { id: req.params.id, deleted: true, entity: 'application' });
     return res.status(204).send();
   } catch (error) {
     return next(error);
   }
+}
+
+// ── Interviews ─────────────────────────────────────────────────────────────────
+
+async function listInterviewsController(_req, res, next) {
+  try {
+    res.json(await listInterviews());
+  } catch (error) { next(error); }
+}
+
+async function createInterviewController(req, res, next) {
+  try {
+    const interview = await createInterview(req.body || {});
+    await createNotification({ type: 'recruitment:updated', severity: 'low', title: 'Interview scheduled', detail: `${interview.roundType} interview scheduled for ${interview.scheduledAt}.` });
+    notifyChange('recruitment:updated', interview);
+    res.status(201).json(interview);
+  } catch (error) { next(error); }
+}
+
+async function updateInterviewController(req, res, next) {
+  try {
+    const interview = await updateInterview(req.params.id, req.body || {});
+    if (!interview) return res.status(404).json({ message: 'Interview not found' });
+    notifyChange('recruitment:updated', interview);
+    return res.json(interview);
+  } catch (error) { return next(error); }
+}
+
+async function deleteInterviewController(req, res, next) {
+  try {
+    const deleted = await deleteInterview(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Interview not found' });
+    notifyChange('recruitment:updated', { id: req.params.id, deleted: true, entity: 'interview' });
+    return res.status(204).send();
+  } catch (error) { return next(error); }
+}
+
+// ── Interview Feedback ──────────────────────────────────────────────────────────
+
+async function getFeedbackController(req, res, next) {
+  try {
+    const feedback = await listFeedbackForInterview(req.params.id);
+    res.json(feedback);
+  } catch (error) { next(error); }
+}
+
+async function createFeedbackController(req, res, next) {
+  try {
+    const feedback = await createFeedback({ ...req.body, interviewId: req.params.id });
+    notifyChange('recruitment:updated', feedback);
+    res.status(201).json(feedback);
+  } catch (error) { next(error); }
+}
+
+async function updateFeedbackController(req, res, next) {
+  try {
+    const feedback = await updateFeedback(req.params.feedbackId, req.body || {});
+    if (!feedback) return res.status(404).json({ message: 'Feedback not found' });
+    return res.json(feedback);
+  } catch (error) { return next(error); }
+}
+
+// ── AI Screening ────────────────────────────────────────────────────────────────
+
+async function screenApplicationController(req, res, next) {
+  try {
+    const { listApplications, listJobs } = require('../services/hrStore');
+    const { prisma } = require('../config/prisma');
+    const { isPostgresConnected } = require('../config/db');
+
+    const [applications, jobs] = await Promise.all([listApplications(), listJobs()]);
+    const application = applications.find((a) => a.id === req.params.id || a.applicationCode === req.params.id);
+    if (!application) return res.status(404).json({ message: 'Application not found' });
+
+    const job = jobs.find((j) => j.jobCode === application.jobCode);
+
+    // Try to get candidate user record for skills
+    let candidate = null;
+    if (application.candidateId) {
+      if (isPostgresConnected()) {
+        candidate = await prisma.user.findUnique({ where: { id: application.candidateId } });
+      } else {
+        const { users: seedUsers } = require('../data/seedData');
+        candidate = seedUsers.find((u) => u.id === application.candidateId) || null;
+      }
+    }
+
+    const result = await screenApplication({ application, job, candidate });
+
+    // Persist the AI score back to the application
+    const updated = await updateApplication(req.params.id, {
+      ...application,
+      aiScore: result.aiScore,
+      aiSummary: result.aiSummary
+    });
+
+    notifyChange('recruitment:updated', updated || application);
+    return res.json({ ...result, application: updated || application });
+  } catch (error) { return next(error); }
+}
+
+// ── Ranked Candidates ──────────────────────────────────────────────────────────
+
+async function rankedCandidatesController(req, res, next) {
+  try {
+    const { listApplications, listJobs } = require('../services/hrStore');
+    const [applications, jobs] = await Promise.all([listApplications(), listJobs()]);
+    const { jobCode } = req.query;
+    const filtered = jobCode ? applications.filter((a) => a.jobCode === jobCode) : applications;
+    const ranked = rankApplications(filtered);
+    // Attach job info
+    const enriched = ranked.map((app) => ({
+      ...app,
+      job: jobs.find((j) => j.jobCode === app.jobCode) || null
+    }));
+    return res.json(enriched);
+  } catch (error) { return next(error); }
+}
+
+// ── Funnel Analytics ───────────────────────────────────────────────────────────
+
+async function funnelAnalyticsController(req, res, next) {
+  try {
+    const { listApplications, listJobs } = require('../services/hrStore');
+    const [applications, jobs] = await Promise.all([listApplications(), listJobs()]);
+    const { jobCode } = req.query;
+    const filtered = jobCode ? applications.filter((a) => a.jobCode === jobCode) : applications;
+    return res.json(computeFunnelAnalytics(filtered, jobs));
+  } catch (error) { return next(error); }
+}
+
+// ── Convert to Employee ─────────────────────────────────────────────────────────
+
+async function convertToEmployeeController(req, res, next) {
+  try {
+    const result = await convertCandidateToEmployee(req.params.id, req.body || {});
+    await createNotification({
+      type: 'employee:created',
+      severity: 'low',
+      title: 'Candidate converted to employee',
+      detail: `${result.employee.name} has been onboarded as ${result.employee.role}.`,
+      employeeId: result.employee.employeeCode
+    });
+    notifyChange('employee:created', result.employee);
+    notifyChange('recruitment:updated', result.application);
+    return res.status(201).json(result);
+  } catch (error) { return next(error); }
 }
 
 async function notificationsController(_req, res, next) {
@@ -429,5 +585,17 @@ module.exports = {
   markAllNotificationsReadController,
   dailySummaryController,
   searchController,
-  copilotController
+  copilotController,
+  // ATS
+  listInterviewsController,
+  createInterviewController,
+  updateInterviewController,
+  deleteInterviewController,
+  getFeedbackController,
+  createFeedbackController,
+  updateFeedbackController,
+  screenApplicationController,
+  rankedCandidatesController,
+  funnelAnalyticsController,
+  convertToEmployeeController
 };

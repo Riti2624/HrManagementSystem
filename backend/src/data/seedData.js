@@ -1,142 +1,163 @@
 const employees = [
   {
     employeeCode: 'emp-001',
-    name: 'Aarav Mehta',
-    role: 'Senior Frontend Engineer',
-    department: 'Engineering',
-    email: 'aarav@hrms.io',
+    name: 'Alice Admin',
+    role: 'HR Director',
+    department: 'HR',
+    email: 'admin@hrms.demo',
     phone: '+1 415 555 0101',
-    location: 'Bengaluru',
+    location: 'New York',
     status: 'Active',
-    salary: 145000,
-    performanceScore: 92,
-    attendanceRate: 97,
-    sentimentScore: 0.84,
-    skills: ['React', 'Framer Motion', 'Design Systems', 'TypeScript'],
-    workload: 0.78,
+    salary: 160000,
+    performanceScore: 95,
+    attendanceRate: 98,
+    sentimentScore: 0.90,
+    skills: ['Leadership', 'HR Strategy', 'Compliance'],
+    workload: 0.85,
     attritionRisk: 'Low'
   },
   {
     employeeCode: 'emp-002',
-    name: 'Maya Iyer',
-    role: 'Sales Lead',
-    department: 'Sales',
-    email: 'maya@hrms.io',
+    name: 'Bob Manager',
+    role: 'Engineering Manager',
+    department: 'Engineering',
+    email: 'manager@hrms.demo',
     phone: '+1 415 555 0102',
-    location: 'Mumbai',
+    location: 'San Francisco',
     status: 'Active',
-    salary: 98000,
-    performanceScore: 74,
-    attendanceRate: 89,
-    sentimentScore: 0.61,
-    skills: ['Negotiation', 'Forecasting', 'CRM'],
-    workload: 0.94,
-    attritionRisk: 'High'
+    salary: 145000,
+    performanceScore: 88,
+    attendanceRate: 95,
+    sentimentScore: 0.75,
+    skills: ['Agile', 'Team Building', 'System Design'],
+    workload: 0.92,
+    attritionRisk: 'Medium'
   },
   {
     employeeCode: 'emp-003',
-    name: 'Noah Khan',
-    role: 'People Operations Specialist',
-    department: 'HR',
-    email: 'noah@hrms.io',
+    name: 'Charlie Employee',
+    role: 'Senior Developer',
+    department: 'Engineering',
+    email: 'employee@hrms.demo',
     phone: '+1 415 555 0103',
-    location: 'Delhi',
-    status: 'On Leave',
-    salary: 86000,
-    performanceScore: 86,
-    attendanceRate: 95,
-    sentimentScore: 0.72,
-    skills: ['Policy', 'Employee Relations', 'Analytics'],
-    workload: 0.66,
+    location: 'Remote',
+    status: 'Active',
+    salary: 130000,
+    performanceScore: 92,
+    attendanceRate: 99,
+    sentimentScore: 0.88,
+    skills: ['React', 'Node.js', 'PostgreSQL'],
+    workload: 0.70,
     attritionRisk: 'Low'
   },
   {
     employeeCode: 'emp-004',
-    name: 'Sara Gomez',
-    role: 'Support Engineer',
-    department: 'Support',
-    email: 'sara@hrms.io',
+    name: 'Diana Recruiter',
+    role: 'Talent Acquisition',
+    department: 'HR',
+    email: 'hr@hrms.demo',
     phone: '+1 415 555 0104',
-    location: 'Remote',
+    location: 'Chicago',
     status: 'Active',
-    salary: 72000,
-    performanceScore: 68,
-    attendanceRate: 83,
-    sentimentScore: 0.49,
-    skills: ['Customer Support', 'Troubleshooting'],
-    workload: 0.97,
-    attritionRisk: 'High'
+    salary: 95000,
+    performanceScore: 85,
+    attendanceRate: 94,
+    sentimentScore: 0.82,
+    skills: ['Sourcing', 'Interviewing', 'Negotiation'],
+    workload: 0.88,
+    attritionRisk: 'Low'
   },
   {
     employeeCode: 'emp-005',
-    name: 'Dev Patel',
-    role: 'Data Analyst',
-    department: 'Analytics',
-    email: 'dev@hrms.io',
+    name: 'Evan Sales',
+    role: 'Account Executive',
+    department: 'Sales',
+    email: 'sales@hrms.demo',
     phone: '+1 415 555 0105',
-    location: 'Pune',
-    status: 'Active',
-    salary: 94000,
-    performanceScore: 88,
-    attendanceRate: 91,
-    sentimentScore: 0.79,
-    skills: ['Power BI', 'SQL', 'Forecasting'],
-    workload: 0.73,
-    attritionRisk: 'Medium'
+    location: 'Austin',
+    status: 'On Leave',
+    salary: 110000,
+    performanceScore: 78,
+    attendanceRate: 85,
+    sentimentScore: 0.65,
+    skills: ['B2B Sales', 'CRM', 'Closing'],
+    workload: 0.95,
+    attritionRisk: 'High'
   }
 ];
 
 const attendanceRecords = [
-  { attendanceCode: 'attendance-001', employeeCode: 'emp-001', date: '2026-06-09', checkIn: '09:01', checkOut: '18:32', status: 'Present', geo: '12.9716,77.5946' },
-  { attendanceCode: 'attendance-002', employeeCode: 'emp-002', date: '2026-06-09', checkIn: '09:24', checkOut: '18:01', status: 'Late', geo: '19.0760,72.8777' },
-  { attendanceCode: 'attendance-003', employeeCode: 'emp-003', date: '2026-06-09', checkIn: '09:10', checkOut: null, status: 'On Leave', geo: '28.7041,77.1025' },
-  { attendanceCode: 'attendance-004', employeeCode: 'emp-004', date: '2026-06-09', checkIn: '09:44', checkOut: '17:44', status: 'Late', geo: 'Remote' },
-  { attendanceCode: 'attendance-005', employeeCode: 'emp-005', date: '2026-06-09', checkIn: '08:55', checkOut: '18:15', status: 'Present', geo: '18.5204,73.8567' }
+  { attendanceCode: 'attendance-001', employeeCode: 'emp-001', date: '2026-06-23', checkIn: '08:45', checkOut: '17:30', status: 'Present', geo: '40.7128,-74.0060' },
+  { attendanceCode: 'attendance-002', employeeCode: 'emp-002', date: '2026-06-23', checkIn: '09:10', checkOut: '18:15', status: 'Present', geo: '37.7749,-122.4194' },
+  { attendanceCode: 'attendance-003', employeeCode: 'emp-003', date: '2026-06-23', checkIn: '08:55', checkOut: '17:05', status: 'Present', geo: 'Remote' },
+  { attendanceCode: 'attendance-004', employeeCode: 'emp-004', date: '2026-06-23', checkIn: '09:30', checkOut: '18:00', status: 'Late', geo: '41.8781,-87.6298' },
+  { attendanceCode: 'attendance-005', employeeCode: 'emp-005', date: '2026-06-23', checkIn: null, checkOut: null, status: 'On Leave', geo: '30.2672,-97.7431' }
 ];
 
 const leaves = [
-  { leaveCode: 'leave-001', employeeCode: 'emp-003', type: 'Casual', from: '2026-06-10', to: '2026-06-12', reason: 'Family event', status: 'Approved', balanceAfter: 10 },
-  { leaveCode: 'leave-002', employeeCode: 'emp-002', type: 'Sick', from: '2026-06-11', to: '2026-06-11', reason: 'Fever', status: 'Pending', balanceAfter: 8 },
-  { leaveCode: 'leave-003', employeeCode: 'emp-004', type: 'Earned', from: '2026-06-18', to: '2026-06-20', reason: 'Travel', status: 'Rejected', balanceAfter: 5 }
+  { leaveCode: 'leave-001', employeeCode: 'emp-005', type: 'Sick', from: '2026-06-20', to: '2026-06-25', reason: 'Medical recovery', status: 'Approved', balanceAfter: 12 },
+  { leaveCode: 'leave-002', employeeCode: 'emp-002', type: 'Casual', from: '2026-07-01', to: '2026-07-05', reason: 'Family vacation', status: 'Pending', balanceAfter: 8 },
+  { leaveCode: 'leave-003', employeeCode: 'emp-003', type: 'Earned', from: '2026-08-10', to: '2026-08-14', reason: 'Conference', status: 'Approved', balanceAfter: 15 }
 ];
 
 const payrolls = [
-  { payrollCode: 'pay-001', employeeCode: 'emp-001', month: 'June 2026', base: 120000, bonus: 12000, deductions: 4200, net: 127800, benchmark: 0.92 },
-  { payrollCode: 'pay-002', employeeCode: 'emp-002', month: 'June 2026', base: 82000, bonus: 6000, deductions: 3300, net: 84700, benchmark: 0.86 },
-  { payrollCode: 'pay-003', employeeCode: 'emp-005', month: 'June 2026', base: 78000, bonus: 7000, deductions: 2900, net: 82100, benchmark: 0.9 }
+  { payrollCode: 'pay-001', employeeCode: 'emp-001', month: 'May 2026', base: 13333, bonus: 2000, deductions: 4500, net: 10833, benchmark: 0.95 },
+  { payrollCode: 'pay-002', employeeCode: 'emp-002', month: 'May 2026', base: 12083, bonus: 1500, deductions: 3800, net: 9783, benchmark: 0.90 },
+  { payrollCode: 'pay-003', employeeCode: 'emp-003', month: 'May 2026', base: 10833, bonus: 1000, deductions: 3200, net: 8633, benchmark: 0.92 }
 ];
 
 const jobs = [
-  { jobCode: 'job-001', title: 'Senior Backend Engineer', department: 'Engineering', status: 'Open', applicants: 18, priority: 'High' },
-  { jobCode: 'job-002', title: 'Support Associate', department: 'Support', status: 'Open', applicants: 31, priority: 'Medium' },
-  { jobCode: 'job-003', title: 'HR Generalist', department: 'HR', status: 'Closed', applicants: 24, priority: 'Low' }
+  { jobCode: 'job-001', title: 'Senior Backend Engineer', department: 'Engineering', status: 'Open', applicants: 12, priority: 'High', description: 'Looking for a senior Node.js expert.', location: 'Remote', salary: '$140k-$160k' },
+  { jobCode: 'job-002', title: 'Product Marketing Manager', department: 'Marketing', status: 'Open', applicants: 25, priority: 'Medium', description: 'Drive our product marketing strategy.', location: 'New York', salary: '$110k-$130k' },
+  { jobCode: 'job-003', title: 'Customer Success Lead', department: 'Support', status: 'Closed', applicants: 40, priority: 'Low', description: 'Lead our customer success team.', location: 'Chicago', salary: '$90k-$110k' }
 ];
 
 const applications = [
-  { applicationCode: 'app-001', jobCode: 'job-001', name: 'Leena Shah', score: 91, stage: 'Shortlisted' },
-  { applicationCode: 'app-002', jobCode: 'job-001', name: 'Kabir S.', score: 84, stage: 'Interview' },
-  { applicationCode: 'app-003', jobCode: 'job-002', name: 'Tara J.', score: 76, stage: 'New' },
-  { applicationCode: 'app-004', jobCode: 'job-002', name: 'Imran Ali', score: 63, stage: 'Rejected' }
+  { applicationCode: 'app-001', jobCode: 'job-001', name: 'Frank Applicant', score: 95, stage: 'Interview', candidateId: null, resumeUrl: '', coverLetter: 'I am a backend expert.', aiScore: 92, aiSummary: 'Strong candidate with deep Node.js experience.' },
+  { applicationCode: 'app-002', jobCode: 'job-001', name: 'Grace Hopper', score: 88, stage: 'Shortlisted', candidateId: null, resumeUrl: '', coverLetter: 'Passionate about scalable systems.', aiScore: 85, aiSummary: 'Good potential, needs to demonstrate leadership.' },
+  { applicationCode: 'app-003', jobCode: 'job-002', name: 'Heidi Sales', score: 80, stage: 'New', candidateId: null, resumeUrl: '', coverLetter: 'Experienced in SaaS marketing.', aiScore: 78, aiSummary: 'Relevant background in SaaS.' },
+  { applicationCode: 'app-004', jobCode: 'job-002', name: 'Ivan Marketer', score: 65, stage: 'Rejected', candidateId: null, resumeUrl: '', coverLetter: 'I like marketing.', aiScore: 50, aiSummary: 'Lacks required technical product marketing skills.' }
 ];
 
 const notifications = [
-  { id: 'notification-001', type: 'alert', title: '3 employees at high attrition risk', detail: 'Support and Sales need immediate workload review.' },
-  { id: 'notification-002', type: 'success', title: 'Leave approvals pending', detail: '2 requests require HR attention.' },
-  { id: 'notification-003', type: 'info', title: 'Payroll sync completed', detail: 'June payroll data refreshed successfully.' }
+  { id: 'notification-001', type: 'alert', title: 'High Attrition Risk Detected', detail: 'Evan Sales has a high attrition risk score based on recent sentiment.', severity: 'high', read: false },
+  { id: 'notification-002', type: 'info', title: 'New Leave Request', detail: 'Bob Manager has requested Casual Leave for July.', severity: 'low', read: false },
+  { id: 'notification-003', type: 'success', title: 'Payroll Processed', detail: 'May 2026 payroll has been successfully disbursed.', severity: 'low', read: true }
 ];
 
 const users = [
   {
     id: 'user-001',
-    name: 'Priya HR',
-    email: 'hr@hrms.io',
+    name: 'Alice Admin',
+    email: 'admin@hrms.demo',
     password: 'Password123!',
     role: 'Admin'
   },
   {
     id: 'user-002',
-    name: 'Jordan Employee',
-    email: 'employee@hrms.io',
+    name: 'Diana Recruiter',
+    email: 'hr@hrms.demo',
+    password: 'Password123!',
+    role: 'HR'
+  },
+  {
+    id: 'user-003',
+    name: 'Bob Manager',
+    email: 'manager@hrms.demo',
+    password: 'Password123!',
+    role: 'Manager'
+  },
+  {
+    id: 'user-004',
+    name: 'Charlie Employee',
+    email: 'employee@hrms.demo',
+    password: 'Password123!',
+    role: 'Employee'
+  },
+  {
+    id: 'user-005',
+    name: 'Evan Sales',
+    email: 'sales@hrms.demo',
     password: 'Password123!',
     role: 'Employee'
   }

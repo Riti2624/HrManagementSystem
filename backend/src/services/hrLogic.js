@@ -89,10 +89,59 @@ async function calculateDashboard() {
   };
 }
 
-function leaveSuggestions() {
+function normalizeWorkload(value) {
+  const numericValue = Number(value || 0);
+  return numericValue > 1 ? numericValue / 100 : numericValue;
+}
+
+async function leaveSuggestions() {
+  const [employees, leaves] = await Promise.all([listEmployees(), listLeaves()]);
+
+  if (employees.length === 0) {
+    return ['Add employee workload and attendance data to generate leave suggestions.'];
+  }
+
+  const departments = Object.values(
+    employees.reduce((accumulator, employee) => {
+      const department = employee.department || 'Unassigned';
+      accumulator[department] = accumulator[department] || {
+        department,
+        count: 0,
+        workload: 0,
+        attendanceRate: 0,
+        highRiskCount: 0,
+        activeLeaveCount: 0
+      };
+
+      accumulator[department].count += 1;
+      accumulator[department].workload += normalizeWorkload(employee.workload);
+      accumulator[department].attendanceRate += Number(employee.attendanceRate || 0);
+      accumulator[department].highRiskCount += employee.attritionRisk === 'High' ? 1 : 0;
+      accumulator[department].activeLeaveCount += leaves.filter((leave) => leave.employeeCode === employee.employeeCode && leave.status !== 'Rejected').length;
+      return accumulator;
+    }, {})
+  ).map((item) => ({
+    ...item,
+    averageWorkload: item.count ? item.workload / item.count : 0,
+    averageAttendance: item.count ? item.attendanceRate / item.count : 0
+  }));
+
+  const bestDepartment = [...departments].sort((left, right) => {
+    const leftScore = left.averageWorkload + left.highRiskCount * 0.2 + left.activeLeaveCount * 0.1;
+    const rightScore = right.averageWorkload + right.highRiskCount * 0.2 + right.activeLeaveCount * 0.1;
+    return leftScore - rightScore;
+  })[0];
+  const strainedDepartment = [...departments].sort((left, right) => {
+    const leftScore = left.averageWorkload + left.highRiskCount * 0.2 + (100 - left.averageAttendance) / 100;
+    const rightScore = right.averageWorkload + right.highRiskCount * 0.2 + (100 - right.averageAttendance) / 100;
+    return rightScore - leftScore;
+  })[0];
+  const lowAttendanceDepartment = [...departments].sort((left, right) => left.averageAttendance - right.averageAttendance)[0];
+
   return [
-    'Early next month is best for Engineering because workload dips after the release freeze.',
-    'Avoid scheduling leave for Sales during the last week of the month due to forecast reviews.'
+    `${bestDepartment.department} is the best current leave window because average workload is ${Math.round(bestDepartment.averageWorkload * 100)}% with ${bestDepartment.activeLeaveCount} active leave request${bestDepartment.activeLeaveCount === 1 ? '' : 's'}.`,
+    `Avoid approving extra leave for ${strainedDepartment.department} right now: workload is ${Math.round(strainedDepartment.averageWorkload * 100)}% and ${strainedDepartment.highRiskCount} employee${strainedDepartment.highRiskCount === 1 ? '' : 's'} are high risk.`,
+    `${lowAttendanceDepartment.department} needs closer review before approval because average attendance is ${Math.round(lowAttendanceDepartment.averageAttendance)}%.`
   ];
 }
 

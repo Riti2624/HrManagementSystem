@@ -7,13 +7,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("Employee")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  role         String        @default("Employee")
+  phone        String?       @default("")
+  skills       String[]      @default([])
+  resumeUrl    String?       @default("")
+  applications Application[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@map("users")
 }
@@ -106,6 +110,11 @@ model Recruitment {
   status       String        @default("Open")
   applicants   Int           @default(0)
   priority     String        @default("Medium")
+  description  String        @default("")
+  requirements String        @default("")
+  location     String        @default("")
+  salary       String        @default("")
+  closingDate  String?
   applications Application[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -121,11 +130,58 @@ model Application {
   name            String
   score           Float       @default(0)
   stage           String      @default("New")
+  candidateId     String?
+  candidate       User?       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  resumeUrl       String?     @default("")
+  coverLetter     String?     @default("")
+  aiScore         Float       @default(0)
+  aiSummary       String      @default("")
+  recruiterNotes  String      @default("")
+  interviews      Interview[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   @@index([jobCode])
+  @@index([candidateId])
   @@map("applications")
+}
+
+model Interview {
+  id            String              @id @default(uuid())
+  interviewCode String              @unique
+  applicationId String
+  application   Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  roundType     String              @default("HR")
+  scheduledAt   String
+  interviewers  String[]            @default([])
+  location      String              @default("")
+  status        String              @default("Scheduled")
+  notes         String              @default("")
+  feedbacks     InterviewFeedback[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([applicationId])
+  @@map("interviews")
+}
+
+model InterviewFeedback {
+  id             String    @id @default(uuid())
+  interviewId    String
+  interview      Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  reviewerName   String
+  communication  Float     @default(0)
+  technical      Float     @default(0)
+  cultureFit     Float     @default(0)
+  leadership     Float     @default(0)
+  overallScore   Float     @default(0)
+  recommendation String    @default("Hold")
+  comments       String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([interviewId])
+  @@map("interview_feedback")
 }
 
 model Notification {
