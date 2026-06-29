@@ -35,4 +35,4 @@ services:
     envVars:
       - key: VITE_API_URL
         # Update this to your backend URL once Render provisions it
-        value: https://hrms-backend.onrender.com
+        value: https://hrms-backend-d421.onrender.com
